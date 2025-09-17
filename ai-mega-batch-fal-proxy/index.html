@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Mega Batch — Cartoon (Online, Smart Split)</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;margin:0;padding:20px;color:#1f2937}
+    .container{max-width:1400px;margin:0 auto}
+    .header{color:#fff;text-align:center;margin-bottom:20px}
+    .panel{background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+    .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    label{font-weight:600;font-size:.9rem;color:#374151;margin-bottom:6px;display:block}
+    input,select,textarea{width:100%;padding:10px 12px;border:2px solid #e5e7eb;border-radius:10px;font-size:.95rem}
+    textarea{min-height:90px;resize:vertical}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border:none;border-radius:10px;font-weight:700;cursor:pointer}
+    .btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+    .btn-muted{background:#fff;border:2px solid #e5e7eb}
+    .grid{display:grid;gap:12px}
+    .grid.grid-view{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+    .grid.list-view{grid-template-columns:1fr}
+    .img-card{background:#fff;border-radius:12px;box-shadow:0 6px 16px rgba(0,0,0,.08);overflow:hidden;display:flex;flex-direction:column}
+    .thumb{width:100%;aspect-ratio:4/3;background:#f3f4f6;display:flex;align-items:center;justify-content:center;position:relative}
+    .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+    .meta{padding:10px 12px;font-size:.85rem}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:700;font-size:.7rem;margin-top:4px}
+    .pending{background:#FFF4CC;color:#9a7a00}
+    .processing{background:#E0F2FE;color:#075985}
+    .completed{background:#D1FAE5;color:#065F46}
+    .failed{background:#FEE2E2;color:#991B1B}
+    .row-compact{display:flex;gap:8px;flex-wrap:wrap}
+    .info{font-size:.85rem;color:#6b7280}
+    .warn{font-size:.85rem;color:#b45309;background:#fffbeb;border:1px solid #f59e0b;padding:8px;border-radius:8px}
+    code{background:#f3f4f6;padding:2px 6px;border-radius:6px}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;background:#f3f4f6;border:1px solid #e5e7eb;border-bottom-width:2px;border-radius:6px;padding:2px 6px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎨 AI Mega Batch — <em>Cartoon</em> (Online) + 🧠 Smart Split</h1>
+      <p class="info">Paste a giant blob of text; the splitter finds prompt boundaries (heuristics or AI via proxy). Then it batches real cartoon-style generations.</p>
+    </div>
+
+    <div class="panel">
+      <div class="row">
+        <div>
+          <label for="provider">Provider</label>
+          <select id="provider">
+            <option value="stability-proxy">Proxy: Stability API</option>
+            <option value="fal-proxy" selected>Proxy: FAL AI</option>
+            <option value="custom">Custom HTTP (base64)</option>
+            <option value="demo">Demo Cartoon (no backend)</option>
+          </select>
+        </div>
+        <div>
+          <label for="proxyBase">Proxy Base Path</label>
+          <input id="proxyBase" value="/api/fal" />
+          <div class="info">If opened with <code>file://</code>, use a full URL (e.g., <code>http://localhost:8787/api/fal</code> or your Worker URL).</div>
+        </div>
+        <div>
+          <label for="customUrl">Custom HTTP endpoint</label>
+          <input id="customUrl" placeholder="https://your-endpoint.example/txt2img" />
+        </div>
+        <div>
+          <label for="outputFormat">Output Format</label>
+          <select id="outputFormat"><option>png</option><option>jpg</option><option>webp</option></select>
+        </div>
+      </div>
+      <p class="warn" style="margin-top:8px">Online mode requires a proxy to avoid CORS & protect API keys. Use the included Cloudflare Worker or Express server.</p>
+    </div>
+
+    <div class="panel">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn btn-muted" data-tab="simple">Simple</button>
+        <button class="btn btn-muted" data-tab="batch">Batch (Smart Split)</button>
+        <button class="btn btn-muted" data-tab="advanced">Advanced</button>
+      </div>
+
+      <div data-content="simple">
+        <label for="basePrompt">Base Prompt</label>
+        <textarea id="basePrompt">A cute robot chef juggling vegetables</textarea>
+        <div class="row" style="margin-top:8px">
+          <div>
+            <label for="numImages">Number of Images</label>
+            <input id="numImages" type="number" min="1" max="200" value="6" />
+          </div>
+          <div>
+            <label for="variationType">Variation Type</label>
+            <select id="variationType">
+              <option value="style">Style Variations</option>
+              <option value="color">Color Variations</option>
+              <option value="perspective">Perspective Variations</option>
+              <option value="time">Time of Day Variations</option>
+              <option value="season">Season Variations</option>
+              <option value="mixed">Mixed Variations</option>
+            </select>
+          </div>
+          <div>
+            <label for="quality">Quality</label>
+            <select id="quality">
+              <option value="draft">Draft (Fast)</option>
+              <option value="standard" selected>Standard</option>
+              <option value="hd">HD</option>
+              <option value="4k">4K Ultra</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div data-content="batch" style="display:none">
+        <div class="row">
+          <div>
+            <label for="bulkText">Paste your mega-prompt text (any format)</label>
+            <textarea id="bulkText" rows="10" placeholder="Paste everything here — paragraphs, bullets, numbers, etc. The splitter will detect prompt boundaries."></textarea>
+            <div class="info" style="margin-top:6px">Tip: separators like <span class="kbd">---</span>, <span class="kbd">###</span>, headings (<span class="kbd">Prompt 12:</span>), bullets, and blank lines help — but not required.</div>
+          </div>
+        </div>
+        <div class="row" style="align-items:end">
+          <div>
+            <label>Splitter Mode</label>
+            <div class="row-compact">
+              <label><input type="radio" name="splitMode" value="heuristic" checked /> Heuristic (client‑side)</label>
+              <label><input type="radio" name="splitMode" value="ai" /> AI via Proxy</label>
+            </div>
+            <div class="info">AI mode uses your proxy’s <span class="kbd">/api/split</span> route (OpenAI optional). Heuristic works offline.</div>
+          </div>
+          <div>
+            <label for="autoSplit">Automation</label>
+            <div><label><input id="autoSplit" type="checkbox" checked /> Auto Smart Split on Start</label></div>
+          </div>
+          <div>
+            <button class="btn btn-muted" id="btnSmartSplit">🧠 Smart Split Now</button>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <label for="promptList">Detected prompts (editable; one per line after split)</label>
+          <textarea id="promptList" rows="10" placeholder="Will populate after Smart Split..."></textarea>
+        </div>
+        <div class="info" style="margin-top:6px">You can still edit the list after splitting.</div>
+      </div>
+
+      <div data-content="advanced" style="display:none">
+        <div class="row">
+          <div>
+            <label for="subject">Subject</label>
+            <input id="subject" placeholder="e.g., dragon, city, person" />
+          </div>
+          <div>
+            <label for="numVariations">Number of Variations</label>
+            <input id="numVariations" type="number" min="1" max="1000" value="100" />
+          </div>
+        </div>
+        <div class="row-compact" style="margin-top:8px">
+          <button class="btn btn-muted" onclick="generateVariations('subjects')">Generate Subjects</button>
+          <button class="btn btn-muted" onclick="generateVariations('styles')">Generate Styles</button>
+          <button class="btn btn-muted" onclick="generateVariations('moods')">Generate Moods</button>
+          <button class="btn btn-muted" onclick="generateVariations('combinations')">Generate Combinations</button>
+        </div>
+        <div style="margin-top:8px">
+          <label>Generated Variations (<span id="variationCount">0</span>/1000)</label>
+          <div id="promptVariations" class="panel" style="max-height:240px;overflow:auto;margin:8px 0"></div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="parallelLimit">Parallel Processing Limit</label>
+            <input id="parallelLimit" type="number" min="1" max="50" value="12" />
+          </div>
+          <div>
+            <label for="autoRetry">Auto‑Retry Failed</label>
+            <select id="autoRetry"><option value="yes">Yes</option><option value="no">No</option></select>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="generateBtn" class="btn btn-primary">🚀 Start Generation</button>
+        <button id="pauseBtn" class="btn btn-muted" disabled>⏸️ Pause</button>
+        <button id="resumeBtn" class="btn btn-muted" disabled>▶️ Resume</button>
+      </div>
+      <div style="margin-top:8px" class="info">Cartoon enforcement adds: <code>cartoon, cel shading, 2D animation, bold outlines, flat shading, vibrant colors</code> (plus a negative prompt to avoid photorealism).</div>
+    </div>
+
+    <div class="panel">
+      <div class="row">
+        <div><strong>Queued:</strong> <span id="sQueued">0</span></div>
+        <div><strong>Active:</strong> <span id="sActive">0</span></div>
+        <div><strong>Completed:</strong> <span id="sDone">0</span></div>
+        <div><strong>Failed:</strong> <span id="sFail">0</span></div>
+        <div><strong>Rate:</strong> <span id="sRate">0/s</span></div>
+        <div><strong>ETA:</strong> <span id="sETA">--:--</span></div>
+        <div><strong>Avg Time:</strong> <span id="sAvg">0s</span></div>
+      </div>
+      <div style="margin-top:8px;background:#e5e7eb;border-radius:10px;overflow:hidden;height:26px">
+        <div id="bar" style="height:26px;width:0%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">0%</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+        <div class="row-compact">
+          <button class="btn btn-muted" data-view="grid">Grid</button>
+          <button class="btn btn-muted" data-view="list">List</button>
+        </div>
+        <div class="row-compact" style="flex:1;min-width:220px">
+          <input id="searchBox" placeholder="Search prompts..." />
+          <select id="filterStatus">
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="processing">Processing</option>
+            <option value="completed">Completed</option>
+            <option value="failed">Failed</option>
+          </select>
+        </div>
+      </div>
+      <div id="grid" class="grid grid-view"></div>
+    </div>
+  </div>
+
+<script>
+const grid=document.getElementById('grid');
+const searchBox=document.getElementById('searchBox');
+const filterStatus=document.getElementById('filterStatus');
+const providerSel=document.getElementById('provider');
+const proxyBaseInput=document.getElementById('proxyBase');
+const customUrlInput=document.getElementById('customUrl');
+const outputFormatSel=document.getElementById('outputFormat');
+
+function resolveBasePath(path){
+  let p=(path||'').trim();
+  if(/^https?:\/\//i.test(p)) return p.replace(/\/$/,'');
+  if(p.startsWith('/')){
+    if(location.protocol==='file:'){ return 'http://localhost:8787' + p; }
+    return (location.origin||'') + p;
+  }
+  if(location.protocol==='file:'){
+    return 'http://localhost:8787/' + p.replace(/^\/?/,''); 
+  }
+  return new URL(p, location.origin).href.replace(/\/$/,'');
+}
+
+document.querySelectorAll('[data-tab]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-tab]').forEach(b=>b.classList.remove('btn-primary'));
+    btn.classList.add('btn-primary');
+    const tab=btn.getAttribute('data-tab');
+    document.querySelectorAll('[data-content]').forEach(c=>c.style.display = (c.getAttribute('data-content')===tab)?'block':'none');
+  });
+});
+document.querySelector('[data-tab="simple"]').click();
+
+document.querySelectorAll('[data-view]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-view]').forEach(b=>b.classList.remove('btn-primary'));
+    btn.classList.add('btn-primary');
+    grid.className = 'grid ' + (btn.getAttribute('data-view')==='list'?'list-view':'grid-view');
+  });
+});
+document.querySelector('[data-view="grid"]').click();
+
+let images=[]; let prompts=[]; let queue=[]; let active=new Set();
+let completed=0, failed=0; let generating=false, paused=false; let startedAt=null; let times=[];
+const sQueued=document.getElementById('sQueued'), sActive=document.getElementById('sActive'), sDone=document.getElementById('sDone'), sFail=document.getElementById('sFail');
+const sRate=document.getElementById('sRate'), sETA=document.getElementById('sETA'), sAvg=document.getElementById('sAvg');
+const bar=document.getElementById('bar');
+
+searchBox.addEventListener('input', filterCards);
+filterStatus.addEventListener('change', filterCards);
+function filterCards(){
+  const term=(searchBox.value||'').toLowerCase(); const st=filterStatus.value;
+  grid.querySelectorAll('.img-card').forEach(card=>{
+    const txt=(card.getAttribute('data-prompt')||'').toLowerCase();
+    const s=card.getAttribute('data-status');
+    card.style.display = (txt.includes(term) && (st==='all'||s===st)) ? '' : 'none';
+  });
+}
+
+const styleVariations=["cel shading","flat color","comic book","anime","toon shading","minimalist cartoon","2D game art","hand-drawn look","bold outlines"];
+const colorVariations=["vibrant palette","pastel palette","neon palette","warm tones","cool tones","high contrast","muted colors"];
+const perspectiveVariations=["close-up","wide angle","aerial view","low angle","birds-eye view","first person","isometric","macro","panoramic","dutch angle"];
+const timeVariations=["sunrise","midday","sunset","twilight","night","golden hour","blue hour","overcast"];
+const seasonVariations=["spring","summer","autumn","winter","rainy","snowy","sunny","cloudy"];
+
+function vary(base,n,type){
+  const out=[]; const b=base||"Cute animal hero";
+  for(let i=0;i<n;i++){
+    if(type==="style") out.push(`${b}, ${styleVariations[i%styleVariations.length]}`);
+    else if(type==="color") out.push(`${b}, ${colorVariations[i%colorVariations.length]}`);
+    else if(type==="perspective") out.push(`${b}, ${perspectiveVariations[i%perspectiveVariations.length]} shot`);
+    else if(type==="time") out.push(`${b} during ${timeVariations[i%timeVariations.length]}`);
+    else if(type==="season") out.push(`${b} in ${seasonVariations[i%seasonVariations.length]}`);
+    else if(type==="mixed"){
+      const s=styleVariations[Math.floor(Math.random()*styleVariations.length)];
+      const c=colorVariations[Math.floor(Math.random()*colorVariations.length)];
+      const p=perspectiveVariations[Math.floor(Math.random()*perspectiveVariations.length)];
+      out.push(`${b}, ${s}, ${c}, ${p} shot`);
+    } else out.push(`${b} — variation ${i+1}`);
+  } return out;
+}
+
+const subjects=["dragon","robot","alien","wizard","knight","astronaut","mermaid","phoenix","unicorn","cyborg","samurai","ninja","pirate","vampire","fairy"];
+const locations=["forest","city","mountain","ocean","desert","space","underwater","sky","cave","castle","temple","laboratory","spaceship","garden","volcano"];
+const moods=["epic","mysterious","peaceful","dramatic","whimsical","cheerful","melancholic","energetic","serene","chaotic","romantic","ominous","hopeful","nostalgic"];
+function generateVariations(which){
+  const subject=document.getElementById('subject').value || "hero";
+  const n=parseInt(document.getElementById('numVariations').value,10);
+  const maxNew=Math.min(n,1000-prompts.length);
+  const arr=[];
+  if(which==='subjects'){
+   for(let i=0;i<maxNew;i++){ const s=subjects[i%subjects.length]; const loc=locations[Math.floor(Math.random()*locations.length)]; const mood=moods[Math.floor(Math.random()*moods.length)]; arr.push(`${mood} ${s} in ${loc}`); }
+  } else if(which==='styles'){ arr.push(...vary(subject,maxNew,'style'));
+  } else if(which==='moods'){
+   for(let i=0;i<maxNew;i++){ const mood=moods[i%moods.length]; const style=styleVariations[Math.floor(Math.random()*styleVariations.length)]; arr.push(`${mood} ${subject}, ${style}`); }
+  } else if(which==='combinations'){
+   for(let i=0;i<maxNew;i++){ const s=subjects[Math.floor(Math.random()*subjects.length)], loc=locations[Math.floor(Math.random()*locations.length)], mood=moods[Math.floor(Math.random()*moods.length)], st=styleVariations[Math.floor(Math.random()*styleVariations.length)], col=colorVariations[Math.floor(Math.random()*colorVariations.length)]; arr.push(`${mood} ${s} in ${loc}, ${st}, ${col}`); }
+  }
+  prompts = prompts.concat(arr); updateVarList();
+}
+function updateVarList(){
+  const box=document.getElementById('promptVariations'); const ct=document.getElementById('variationCount');
+  if(!box) return;
+  ct.textContent = prompts.length.toString(); const start=Math.max(0,prompts.length-10); const last=prompts.slice(start);
+  box.innerHTML = last.map((p,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span>${p}</span><button class="btn btn-muted" onclick="removeVariation(${start+i})">×</button></div>`).join('');
+}
+function removeVariation(i){ if(i>=0&&i<prompts.length){ prompts.splice(i,1); updateVarList(); } }
+
+function smartSplitHeuristic(text){
+  text = (text||'').replace(/\r\n/g,'\n').replace(/\u00A0/g,' ').trim();
+  if(!text) return [];
+  const lines = text.split('\n');
+  const isSep = (s)=>/^\s*(?:[-–—]{3,}|={3,}|\*{3,}|#{2,}|_{3,})\s*$/.test(s);
+  const bulletRe = /^\s*(?:[-*•◦–]|(\d+)[\.\)]|(?:Prompt|Image|Scene|Shot)\s*#?\s*\d+[:.\-]?)\s+/i;
+  const blocks=[]; let cur=[];
+  function pushCur(){ const j=cur.join(' ').replace(/\s{2,}/g,' ').trim(); if(j) blocks.push(j); cur=[]; }
+  for(const raw of lines){
+    const line = raw.trim();
+    if(!line){ if(cur.length) pushCur(); continue; }
+    if(isSep(line)){ if(cur.length) pushCur(); continue; }
+    if(bulletRe.test(line)){ if(cur.length) pushCur(); cur.push(line.replace(bulletRe,'')); continue; }
+    if(/^([A-Z][\w\s]{0,60})[:\-–—]\s*$/.test(line) && cur.length){ pushCur(); cur.push(line.replace(/[:\-–—]\s*$/,'')); continue; }
+    cur.push(line);
+  }
+  if(cur.length) pushCur();
+  const minLen=12; const merged=[];
+  for(let i=0;i<blocks.length;i++){ const b=blocks[i]; if(b.length<minLen && i<blocks.length-1){ blocks[i+1]=b+' '+blocks[i+1]; } else { merged.push(b); } }
+  const out=[]; const seen=new Set();
+  for(const b of merged){ const t=b.trim(); if(t && !seen.has(t.toLowerCase())){ seen.add(t.toLowerCase()); out.push(t); } }
+  return out;
+}
+
+async function smartSplitAI(text){
+  const base = resolveBasePath((proxyBaseInput.value||'/api/fal').replace(/\/fal\/?$/,'')) || '/api';
+  const res = await fetch(base + '/split', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ text }) });
+  if(!res.ok){ throw new Error('Split proxy error: '+res.status+' '+res.statusText); }
+  const json = await res.json();
+  if(Array.isArray(json.prompts)) return json.prompts;
+  if(json.prompts && typeof json.prompts === 'string') return json.prompts.split('\n').map(s=>s.trim()).filter(Boolean);
+  throw new Error('Unexpected split response');
+}
+document.getElementById('btnSmartSplit').addEventListener('click', smartSplitAI);
+
+function mapQuality(q){
+  if(q==='draft') return {width:576, height:448, steps:18};
+  if(q==='standard') return {width:768, height:576, steps:26};
+  if(q==='hd') return {width:960, height:720, steps:34};
+  return {width:1152, height:864, steps:42};
+}
+function cartoonizePrompt(p){
+  const style="cartoon, cel shading, 2D animation, bold outlines, flat shading, vibrant colors, crisp lines";
+  const negative="photorealistic, realistic, 3d render, blurry, grainy, low quality, watermark, text";
+  return {prompt: `${p}, ${style}`, negative};
+}
+
+async function provider_stability_proxy(prompt, opts){
+  const base = resolveBasePath(proxyBaseInput.value || "/api/stability");
+  const {width,height,steps} = mapQuality(opts.quality);
+  const {prompt:finalPrompt, negative} = cartoonizePrompt(prompt);
+  const res = await fetch(`${base}/txt2img`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ prompt: finalPrompt, negative_prompt: negative, width, height, steps, style_preset: "anime" })});
+  if(!res.ok) throw new Error("Proxy error: " + res.status + " " + res.statusText);
+  const json = await res.json();
+  if(!json.images || !json.images.length) throw new Error("No images returned");
+  const b64 = json.images[0].startsWith("data:") ? json.images[0].split(",")[1] : json.images[0];
+  return "data:image/"+(outputFormatSel.value||"png")+";base64,"+b64;
+}
+async function provider_fal_proxy(prompt, opts){
+  let base = proxyBaseInput.value || "/api/fal";
+  if(/\/api\/stability\/?$/i.test(base)) base = base.replace(/\/api\/stability\/?$/i, '/api/fal');
+  base = resolveBasePath(base);
+  const {width,height,steps} = mapQuality(opts.quality);
+  const {prompt:finalPrompt, negative} = cartoonizePrompt(prompt);
+  const res = await fetch(`${base}/txt2img`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ prompt: finalPrompt, negative_prompt: negative, width, height, steps })});
+  if(!res.ok) throw new Error("FAL proxy error: " + res.status + " " + res.statusText);
+  const json = await res.json();
+  if(!json.images || !json.images.length) throw new Error("No images returned from FAL route");
+  const b64 = json.images[0].startsWith("data:") ? json.images[0].split(",")[1] : json.images[0];
+  return "data:image/"+(outputFormatSel.value||"png")+";base64,"+b64;
+}
+async function provider_custom(prompt, opts){
+  const url = customUrlInput.value.trim(); if(!url) throw new Error("Set Custom HTTP endpoint first");
+  const {width,height,steps} = mapQuality(opts.quality);
+  const {prompt:finalPrompt, negative} = cartoonizePrompt(prompt);
+  const res = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ prompt: finalPrompt, negative_prompt: negative, width, height, steps })});
+  if(!res.ok) throw new Error("Custom provider error: " + res.status + " " + res.statusText);
+  const json = await res.json(); if(!json.images || !json.images.length) throw new Error("No images returned");
+  const b64 = json.images[0].startsWith("data:") ? json.images[0].split(",")[1] : json.images[0];
+  return "data:image/"+(outputFormatSel.value||"png")+";base64,"+b64;
+}
+async function provider_demo(prompt, opts){
+  const {width,height}=mapQuality(opts.quality); const c=document.createElement("canvas"); c.width=width; c.height=height; const x=c.getContext("2d");
+  const g=x.createLinearGradient(0,0,width,height); g.addColorStop(0,"#60a5fa"); g.addColorStop(1,"#f472b6"); x.fillStyle=g; x.fillRect(0,0,width,height);
+  x.fillStyle="#111827"; x.font="bold 28px system-ui"; x.fillText((prompt.length>40?prompt.slice(0,37)+'...':prompt), 20, 50); return c.toDataURL("image/"+(outputFormatSel.value||"png"));
+}
+async function generateWithProvider(prompt, opts){
+  const p=providerSel.value;
+  if(p==='stability-proxy') return provider_stability_proxy(prompt, opts);
+  if(p==='fal-proxy') return provider_fal_proxy(prompt, opts);
+  if(p==='custom') return provider_custom(prompt, opts);
+  return provider_demo(prompt, opts);
+}
+
+const generateBtn=document.getElementById('generateBtn');
+const pauseBtn=document.getElementById('pauseBtn');
+const resumeBtn=document.getElementById('resumeBtn');
+generateBtn.addEventListener('click', start);
+pauseBtn.addEventListener('click', ()=>{ paused=true; pauseBtn.disabled=true; resumeBtn.disabled=false; });
+resumeBtn.addEventListener('click', ()=>{ paused=false; pauseBtn.disabled=false; resumeBtn.disabled=true; });
+
+function collectPrompts(){
+  const simpleVisible=document.querySelector('[data-content="simple"]').style.display!=='none';
+  const batchVisible=document.querySelector('[data-content="batch"]').style.display!=='none';
+  if(simpleVisible){
+    const base=document.getElementById('basePrompt').value;
+    const n=parseInt(document.getElementById('numImages').value,10);
+    const v=document.getElementById('variationType').value;
+    return vary(base,n,v);
+  }
+  if(batchVisible){
+    const auto=document.getElementById('autoSplit').checked;
+    const raw=document.getElementById('promptList').value.trim();
+    if(!raw && auto){
+      return smartSplitHeuristic(document.getElementById('bulkText').value);
+    }
+    const arr = raw.split('\n').map(s=>s.trim()).filter(Boolean);
+    return arr.length? arr : smartSplitHeuristic(document.getElementById('bulkText').value);
+  }
+  return prompts.length?prompts:["Cartoon mascot waving hello"];
+}
+
+function createCard(image){
+  const card=document.createElement('div'); card.className='img-card'; card.setAttribute('data-id',image.id); card.setAttribute('data-status',image.status); card.setAttribute('data-prompt',image.prompt);
+  const thumb=document.createElement('div'); thumb.className='thumb'; thumb.innerHTML='<div style="width:28px;height:28px;border:3px solid #e5e7eb;border-top:3px solid #667eea;border-radius:50%;animation:spin 1s linear infinite"></div>';
+  const meta=document.createElement('div'); meta.className='meta'; meta.innerHTML=`<div><strong>Image ${image.index+1}</strong></div><div class="info">${image.prompt}</div><div class="pill ${image.status}">${image.status.toUpperCase()}</div>`;
+  card.appendChild(thumb); card.appendChild(meta); grid.appendChild(card);
+}
+function updateCard(image, dataUrl){
+  const card=grid.querySelector(`[data-id="${image.id}"]`); if(!card) return;
+  card.setAttribute('data-status', image.status);
+  const pill=card.querySelector('.pill'); pill.className='pill '+image.status; pill.textContent=image.status.toUpperCase();
+  const thumb=card.querySelector('.thumb'); thumb.innerHTML='';
+  if(image.status==='completed'){ const img=new Image(); img.alt=image.prompt; img.src=dataUrl; thumb.appendChild(img); }
+  else if(image.status==='failed'){ thumb.textContent='Failed'; }
+  else{ thumb.innerHTML='<div style="width:28px;height:28px;border:3px solid #e5e7eb;border-top:3px solid #667eea;border-radius:50%;animation:spin 1s linear infinite"></div>'; }
+}
+
+async function start(){
+  if(generating) return;
+  const list=collectPrompts();
+  if(!list.length){ alert("No prompts detected. Paste text and click Smart Split."); return; }
+  generating=true; paused=false; generateBtn.disabled=true; pauseBtn.disabled=false; resumeBtn.disabled=true;
+  images=[]; queue=[]; active.clear(); completed=0; failed=0; startedAt=Date.now(); times=[]; grid.innerHTML='';
+  const quality=(document.getElementById('quality')||{value:'standard'}).value;
+  list.forEach((p,i)=>{ const item={id:Date.now()+i,prompt:p,status:'pending',index:i,started:null}; images.push(item); queue.push(item); createCard(item); });
+  tick();
+  const parallel = document.querySelector('[data-content="advanced"]').style.display!=='none' ? (parseInt(document.getElementById('parallelLimit').value,10)||8) : 6;
+  (async function loop(){
+    while(queue.length>0 || active.size>0){
+      if(paused){ await new Promise(r=>setTimeout(r,120)); continue; }
+      while(active.size<parallel && queue.length>0){
+        const img=queue.shift(); img.status='processing'; img.started=Date.now(); active.add(img.id); updateCard(img);
+        generateOne(img,{quality}).catch(()=>{});
+      }
+      await new Promise(r=>setTimeout(r,120)); tick();
+    }
+    generating=false; generateBtn.disabled=false; pauseBtn.disabled=true; resumeBtn.disabled=true;
+    alert(`Done!\nCompleted: ${completed}\nFailed: ${failed}\nTotal: ${images.length}`);
+  })();
+}
+async function generateOne(img, opts){
+  try{
+    const dataUrl = await generateWithProvider(img.prompt, opts);
+    img.status='completed'; completed++; active.delete(img.id); times.push((Date.now()-img.started)/1000); updateCard(img, dataUrl);
+  }catch(e){
+    console.error(e); img.status='failed'; failed++; active.delete(img.id); updateCard(img);
+    const auto=document.getElementById('autoRetry')?.value||'no'; if(auto==='yes' && !img._retried){ img._retried=true; img.status='pending'; queue.push(img); updateCard(img); }
+  }
+}
+function tick(){
+  const total=images.length, done=completed+failed, pct= total? Math.round(done/total*100):0;
+  sQueued.textContent=queue.length.toString(); sActive.textContent=active.size.toString(); sDone.textContent=completed.toString(); sFail.textContent=failed.toString();
+  bar.style.width = pct + "%"; bar.textContent = pct + "%";
+  if(startedAt && done>0){ const elapsed=(Date.now()-startedAt)/1000; const rate=completed/Math.max(elapsed,0.0001); sRate.textContent=rate.toFixed(2)+"/s"; const remain=total-done; const eta=remain/Math.max(rate,0.0001); sETA.textContent=formatTime(eta); const avg=times.length?(times.reduce((a,b)=>a+b,0)/times.length):0; sAvg.textContent=avg.toFixed(1)+"s"; }
+  else{ sRate.textContent="0/s"; sETA.textContent="--:--"; sAvg.textContent="0s"; }
+}
+function formatTime(s){ if(!isFinite(s)||s<0) return "--:--"; if(s<60) return Math.round(s)+"s"; const m=Math.floor(s/60), sec=Math.round(s%60); return m+":"+sec.toString().padStart(2,"0"); }
+
+window.removeVariation=removeVariation; window.generateVariations=generateVariations;
+
+if(location.protocol==='file:'){
+  const v = proxyBaseInput.value.trim();
+  if(!/^https?:\/\//i.test(v)){
+    proxyBaseInput.value = 'http://localhost:8787' + (v.startsWith('/')? v : '/' + v);
+  }
+}
+</script>
+</body>
+</html>

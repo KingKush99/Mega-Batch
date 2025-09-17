@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Mega Batch — Cartoon (AI Smart Split)</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);margin:0;padding:20px}
+    .wrap{max-width:1100px;margin:0 auto}
+    .panel{background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.08);margin-bottom:14px}
+    label{display:block;font-weight:700;margin:.5rem 0 .25rem}
+    input,select,textarea{width:100%;padding:.6rem;border:2px solid #e5e7eb;border-radius:10px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .btn{padding:.7rem 1rem;border-radius:10px;border:none;cursor:pointer;font-weight:800}
+    .btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+    .btn-muted{background:#fff;border:2px solid #e5e7eb}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+    .card{border:1px solid #eee;border-radius:12px;overflow:hidden}
+    .thumb{aspect-ratio:4/3;background:#f3f4f6;display:flex;align-items:center;justify-content:center}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:800;font-size:.72rem}
+    .pending{background:#FFF4CC;color:#9a7a00}
+    .processing{background:#E0F2FE;color:#075985}
+    .completed{background:#D1FAE5;color:#065F46}
+    .failed{background:#FEE2E2;color:#991B1B}
+    .hint{font-size:.9rem;color:#6b7280}
+    .error{background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;padding:8px;border-radius:10px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <h2>🎨 AI Mega Batch — <em>Cartoon</em> (AI Smart Split)</h2>
+    <p class="hint">Keys live on your <strong>Cloudflare Worker</strong>. The page calls your proxy, not vendor APIs.</p>
+
+    <label>Proxy Base Path (Worker URL)</label>
+    <input id="proxyBase" placeholder="https://your-worker.workers.dev/api/fal"/>
+
+    <div class="row">
+      <div>
+        <label>Paste your mega text (any format)</label>
+        <textarea id="bulk" rows="10" placeholder="Paste a big blob here. The AI splitter will figure out prompt boundaries automatically."></textarea>
+        <div class="hint">AI split is required; set <span style="font-family:monospace">OPENAI_API_KEY</span> on your Worker.</div>
+      </div>
+      <div>
+        <label>Or upload a text file</label>
+        <input id="file" type="file" accept=".txt,.md,.csv,.json"/>
+        <div id="fileName" class="hint"></div>
+        <label style="margin-top:.5rem">AI split mode</label>
+        <select id="splitMode">
+          <option value="ai" selected>AI (best)</option>
+          <option value="heuristic">Heuristic (no OpenAI)</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn btn-muted" id="btnSplit">🧠 AI Smart Split</button>
+      <span id="splitMsg" class="hint"></span>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <div>
+        <label>Detected prompts (<span id="count">0</span>/1000)</label>
+        <div id="list" class="panel" style="max-height:220px;overflow:auto"></div>
+      </div>
+      <div>
+        <label>Quality</label>
+        <select id="quality">
+          <option value="standard">Standard</option>
+          <option value="hd">HD</option>
+          <option value="4k">4K</option>
+        </select>
+        <label style="margin-top:.75rem">Parallel limit</label>
+        <input id="parallel" type="number" min="1" max="24" value="10"/>
+        <label style="margin-top:.75rem">Auto‑retry failures</label>
+        <select id="retry"><option>yes</option><option>no</option></select>
+        <button class="btn btn-primary" id="go" style="margin-top:.75rem">🚀 Start Generation</button>
+        <div id="err" class="error" style="display:none;margin-top:.5rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="row" style="grid-template-columns:repeat(4,1fr)">
+      <div><b>Queued:</b> <span id="q">0</span></div>
+      <div><b>Active:</b> <span id="a">0</span></div>
+      <div><b>Completed:</b> <span id="d">0</span></div>
+      <div><b>Failed:</b> <span id="f">0</span></div>
+    </div>
+    <div id="grid" class="grid" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<script>
+const grid=document.getElementById('grid');
+const bulk=document.getElementById('bulk');
+const fileIn=document.getElementById('file');
+const fileName=document.getElementById('fileName');
+const btnSplit=document.getElementById('btnSplit');
+const list=document.getElementById('list');
+const count=document.getElementById('count');
+const proxyBase=document.getElementById('proxyBase');
+const quality=document.getElementById('quality');
+const parallel=document.getElementById('parallel');
+const retry=document.getElementById('retry');
+const go=document.getElementById('go');
+const qEl=document.getElementById('q'), aEl=document.getElementById('a'), dEl=document.getElementById('d'), fEl=document.getElementById('f');
+const err=document.getElementById('err'); const splitMsg=document.getElementById('splitMsg'); const splitMode=document.getElementById('splitMode');
+
+let prompts=[]; let queue=[]; let active=new Set(); let completed=0, failed=0;
+
+fileIn.addEventListener('change', async (e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  fileName.textContent = f.name + " (" + f.size + " bytes)";
+  const text=await f.text();
+  bulk.value = text;
+});
+
+btnSplit.addEventListener('click', async ()=>{
+  try{
+    err.style.display='none'; splitMsg.textContent='Splitting...';
+    const base = (proxyBase.value||'').replace(/\/$/,'').replace(/\/api\/fal$/,'/api');
+    const useAI = splitMode.value === 'ai';
+    const res = await fetch(base + '/split', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: bulk.value, ai: useAI }) });
+    const json = await res.json();
+    if(!res.ok){ throw new Error(json && json.error ? json.error : ("Split error " + res.status)); }
+    if(!Array.isArray(json.prompts)){ throw new Error('Bad split response'); }
+    prompts = json.prompts.slice(0, 1000);
+    renderPromptList();
+    splitMsg.textContent = (json.mode === 'ai' ? '✓ AI split complete' : '✓ Heuristic split complete');
+  }catch(e){
+    err.textContent = e.message; err.style.display='block'; splitMsg.textContent='';
+  }
+});
+
+function renderPromptList(){
+  count.textContent = String(prompts.length);
+  list.innerHTML = prompts.map((p,i)=>`<div style="padding:6px;border-bottom:1px solid #eee"><b>${i+1}.</b> ${escapeHtml(p)}</div>`).join('');
+}
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+function mapQuality(q){ if(q==='hd') return {width:960,height:720,steps:34}; if(q==='4k') return {width:1152,height:864,steps:42}; return {width:768,height:576,steps:26}; }
+function cartoonize(p){ const style="cartoon, cel shading, 2D animation, bold outlines, flat shading, vibrant colors"; const neg="photorealistic, realistic, 3d render, blurry, watermark, text"; return { prompt: p + ", " + style, negative_prompt: neg }; }
+
+async function txt2img(basePath, prompt, q){
+  const {width,height,steps}=mapQuality(q);
+  const {prompt:final, negative_prompt}=cartoonize(prompt);
+  const res = await fetch(basePath.replace(/\/$/,'') + "/txt2img", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ prompt: final, negative_prompt, width, height, steps }) });
+  if(!res.ok){ const t=await res.text(); throw new Error("Proxy error " + res.status + ": " + t); }
+  const json = await res.json();
+  const b64 = json.images && json.images[0]; if(!b64) throw new Error("No image returned");
+  return "data:image/png;base64," + b64;
+}
+
+go.addEventListener('click', async ()=>{
+  try{
+    err.style.display='none';
+    const base = proxyBase.value.trim(); if(!base){ throw new Error("Set Proxy Base Path (your Worker URL) — e.g. https://your-worker.workers.dev/api/fal"); }
+    if(!prompts.length){ throw new Error("Run AI Smart Split first"); }
+    queue = prompts.map((p,i)=>({ id: Date.now()+i, prompt: p, status: 'pending', index: i }));
+    active.clear(); completed=0; failed=0; grid.innerHTML=''; tick();
+
+    queue.forEach(img => createCard(img));
+    const par = Math.max(1, Math.min(24, parseInt(parallel.value||"10",10)));
+    (async function loop(){
+      while(queue.length>0 || active.size>0){
+        while(active.size<par && queue.length>0){
+          const img=queue.shift(); img.status='processing'; active.add(img.id); updateCard(img);
+          generateOne(base, img).catch(()=>{});
+        }
+        await new Promise(r=>setTimeout(r,120)); tick();
+      }
+      alert(`Done!\nCompleted: ${completed}\nFailed: ${failed}\nTotal: ${prompts.length}`);
+    })();
+  }catch(e){
+    err.textContent = e.message; err.style.display='block';
+  }
+});
+
+async function generateOne(base, img){
+  try{
+    const url = await txt2img(base, img.prompt, quality.value);
+    img.status='completed'; completed++; active.delete(img.id); updateCard(img, url);
+  }catch(e){
+    console.error(e); img.status='failed'; failed++; active.delete(img.id); updateCard(img);
+    if(retry.value==='yes' && !img._retried){ img._retried=true; img.status='pending'; queue.push(img); updateCard(img); }
+  }
+}
+
+function createCard(image){
+  const card=document.createElement('div'); card.className='card'; card.dataset.id=image.id; card.dataset.status=image.status;
+  const thumbs=document.createElement('div'); thumbs.className='thumb'; thumbs.textContent='…';
+  const meta=document.createElement('div'); meta.style.padding='8px'; meta.innerHTML=`<div class="pill ${image.status}">${image.status.toUpperCase()}</div><div class="hint">${escapeHtml(image.prompt)}</div>`;
+  card.appendChild(thumbs); card.appendChild(meta); grid.appendChild(card);
+}
+function updateCard(image, url){
+  const card=grid.querySelector(`[data-id="${image.id}"]`); if(!card) return;
+  card.dataset.status=image.status;
+  const pill=card.querySelector('.pill'); pill.className='pill ' + image.status; pill.textContent=image.status.toUpperCase();
+  const thumb=card.querySelector('.thumb');
+  if(image.status==='completed'){ thumb.innerHTML=`<img src="${url}" alt="img" style="width:100%;height:100%;object-fit:cover">`; }
+  else if(image.status==='failed'){ thumb.textContent='Failed'; }
+  else { thumb.textContent='…'; }
+}
+
+function tick(){ qEl.textContent=String(queue.length); aEl.textContent=String(active.size); dEl.textContent=String(completed); fEl.textContent=String(failed); }
+</script>
+</body>
+</html>
