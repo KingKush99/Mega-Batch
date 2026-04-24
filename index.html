@@ -1,209 +1,380 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AI Mega Batch — Cartoon (AI Smart Split)</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Stats League Play</title>
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);margin:0;padding:20px}
-    .wrap{max-width:1100px;margin:0 auto}
-    .panel{background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.08);margin-bottom:14px}
-    label{display:block;font-weight:700;margin:.5rem 0 .25rem}
-    input,select,textarea{width:100%;padding:.6rem;border:2px solid #e5e7eb;border-radius:10px}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .btn{padding:.7rem 1rem;border-radius:10px;border:none;cursor:pointer;font-weight:800}
-    .btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
-    .btn-muted{background:#fff;border:2px solid #e5e7eb}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
-    .card{border:1px solid #eee;border-radius:12px;overflow:hidden}
-    .thumb{aspect-ratio:4/3;background:#f3f4f6;display:flex;align-items:center;justify-content:center}
-    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:800;font-size:.72rem}
-    .pending{background:#FFF4CC;color:#9a7a00}
-    .processing{background:#E0F2FE;color:#075985}
-    .completed{background:#D1FAE5;color:#065F46}
-    .failed{background:#FEE2E2;color:#991B1B}
-    .hint{font-size:.9rem;color:#6b7280}
-    .error{background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;padding:8px;border-radius:10px}
+    :root {
+      --bg: #0b1020;
+      --panel: #131a2f;
+      --panel-2: #1b2441;
+      --text: #ecf2ff;
+      --muted: #8e9bc1;
+      --up: #14b86a;
+      --down: #f25f7a;
+      --accent: #6ea8fe;
+      --warn: #ffd166;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at 20% 10%, #1a2654 0%, var(--bg) 45%);
+    }
+
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 18px; }
+    .panel {
+      background: linear-gradient(170deg, var(--panel), var(--panel-2));
+      border: 1px solid #2b3762;
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    h1 { margin: 0 0 6px; font-size: 1.5rem; }
+    p { margin: 0; color: var(--muted); }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .stat { background: #111939; border: 1px solid #2d3d76; border-radius: 10px; padding: 10px; }
+    .stat small { color: var(--muted); display: block; }
+    .stat b { font-size: 1.2rem; }
+
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+    button {
+      border: none;
+      border-radius: 9px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 9px 12px;
+    }
+    .btn-main { background: var(--accent); color: #071022; }
+    .btn-ghost { background: #202a50; color: var(--text); border: 1px solid #3b4b86; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 10px;
+    }
+
+    .card { background: #111938; border: 1px solid #334680; border-radius: 12px; padding: 12px; }
+    .chip {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 12px;
+      font-weight: 800;
+      margin-right: 6px;
+    }
+    .up { background: rgba(20,184,106,.18); color: #7dffc2; }
+    .down { background: rgba(242,95,122,.18); color: #ff9fb0; }
+    .flat { background: rgba(255,209,102,.18); color: #ffe7aa; }
+
+    .row { display: flex; justify-content: space-between; gap: 10px; }
+    .name { font-size: 1rem; margin: 0 0 4px; }
+    .sub { color: var(--muted); font-size: .9rem; }
+
+    .bets-list { display: grid; gap: 8px; margin-top: 10px; }
+    .bet { background: #111938; border: 1px solid #2e407b; border-radius: 10px; padding: 9px; }
+
+    .modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+    }
+    .modal.open { display: flex; }
+    .modal-body {
+      width: min(460px, 100%);
+      background: #111939;
+      border: 1px solid #324786;
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    label { font-size: .88rem; color: var(--muted); display: block; margin-top: 8px; }
+    input, select {
+      width: 100%;
+      margin-top: 5px;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #3a4b84;
+      background: #0d1430;
+      color: var(--text);
+    }
+
+    .fine { font-size: .84rem; color: var(--muted); }
   </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="panel">
-    <h2>🎨 AI Mega Batch — <em>Cartoon</em> (AI Smart Split)</h2>
-    <p class="hint">Keys live on your <strong>Cloudflare Worker</strong>. The page calls your proxy, not vendor APIs.</p>
-
-    <label>Proxy Base Path (Worker URL)</label>
-    <input id="proxyBase" placeholder="https://your-worker.workers.dev/api/fal"/>
-
-    <div class="row">
-      <div>
-        <label>Paste your mega text (any format)</label>
-        <textarea id="bulk" rows="10" placeholder="Paste a big blob here. The AI splitter will figure out prompt boundaries automatically."></textarea>
-        <div class="hint">AI split is required; set <span style="font-family:monospace">OPENAI_API_KEY</span> on your Worker.</div>
+  <div class="wrap">
+    <div class="panel">
+      <h1>📈 YouTube Stats League Play</h1>
+      <p>Bet fake coins on creators going <strong>UP</strong> or <strong>DOWN</strong> in the next round. No real money, just show vibes.</p>
+      <div class="stats">
+        <div class="stat"><small>Bankroll</small><b id="bankroll">0</b></div>
+        <div class="stat"><small>Round</small><b id="round">1</b></div>
+        <div class="stat"><small>Open Bets</small><b id="openBets">0</b></div>
+        <div class="stat"><small>Total P/L</small><b id="pnl">0</b></div>
       </div>
-      <div>
-        <label>Or upload a text file</label>
-        <input id="file" type="file" accept=".txt,.md,.csv,.json"/>
-        <div id="fileName" class="hint"></div>
-        <label style="margin-top:.5rem">AI split mode</label>
-        <select id="splitMode">
-          <option value="ai" selected>AI (best)</option>
-          <option value="heuristic">Heuristic (no OpenAI)</option>
-        </select>
+      <div class="toolbar">
+        <button class="btn-main" id="advance">Advance Round + Settle Bets</button>
+        <button class="btn-ghost" id="reset">Reset League</button>
       </div>
+      <p class="fine" style="margin-top:8px;">Odds are dynamic: stronger momentum pays less, underdogs pay more.</p>
     </div>
 
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-      <button class="btn btn-muted" id="btnSplit">🧠 AI Smart Split</button>
-      <span id="splitMsg" class="hint"></span>
+    <div class="panel">
+      <h3 style="margin:0 0 10px;">Creators Board</h3>
+      <div id="creatorGrid" class="grid"></div>
     </div>
 
-    <div class="row" style="margin-top:10px">
-      <div>
-        <label>Detected prompts (<span id="count">0</span>/1000)</label>
-        <div id="list" class="panel" style="max-height:220px;overflow:auto"></div>
-      </div>
-      <div>
-        <label>Quality</label>
-        <select id="quality">
-          <option value="standard">Standard</option>
-          <option value="hd">HD</option>
-          <option value="4k">4K</option>
-        </select>
-        <label style="margin-top:.75rem">Parallel limit</label>
-        <input id="parallel" type="number" min="1" max="24" value="10"/>
-        <label style="margin-top:.75rem">Auto‑retry failures</label>
-        <select id="retry"><option>yes</option><option>no</option></select>
-        <button class="btn btn-primary" id="go" style="margin-top:.75rem">🚀 Start Generation</button>
-        <div id="err" class="error" style="display:none;margin-top:.5rem"></div>
+    <div class="panel">
+      <h3 style="margin:0 0 10px;">Your Bet Slip</h3>
+      <div id="betsList" class="bets-list"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="betModal">
+    <div class="modal-body">
+      <h3 id="betTitle" style="margin:0 0 8px;">Place Bet</h3>
+      <label>Direction</label>
+      <select id="betDirection">
+        <option value="up">Up</option>
+        <option value="down">Down</option>
+      </select>
+      <label>Stake (fake coins)</label>
+      <input id="betStake" type="number" min="10" step="10" value="100" />
+      <label>Round Length</label>
+      <select id="betHorizon">
+        <option value="1">1 round</option>
+        <option value="2">2 rounds</option>
+        <option value="3">3 rounds</option>
+      </select>
+      <div id="oddsPreview" class="fine" style="margin-top:8px"></div>
+      <div class="toolbar" style="margin-top:10px">
+        <button class="btn-main" id="submitBet">Place Bet</button>
+        <button class="btn-ghost" id="cancelBet">Cancel</button>
       </div>
     </div>
   </div>
 
-  <div class="panel">
-    <div class="row" style="grid-template-columns:repeat(4,1fr)">
-      <div><b>Queued:</b> <span id="q">0</span></div>
-      <div><b>Active:</b> <span id="a">0</span></div>
-      <div><b>Completed:</b> <span id="d">0</span></div>
-      <div><b>Failed:</b> <span id="f">0</span></div>
-    </div>
-    <div id="grid" class="grid" style="margin-top:10px"></div>
-  </div>
-</div>
+  <script>
+    const state = {
+      bankroll: 10000,
+      round: 1,
+      pnl: 0,
+      creators: [
+        { id: 1, name: 'MrBeast', subsM: 248, avgViewsM: 82, momentum: 0.7 },
+        { id: 2, name: 'Sidemen', subsM: 22.5, avgViewsM: 5.8, momentum: 0.2 },
+        { id: 3, name: 'Kai Cenat', subsM: 7.2, avgViewsM: 4.1, momentum: 0.4 },
+        { id: 4, name: 'Mark Rober', subsM: 59, avgViewsM: 17, momentum: 0.8 },
+        { id: 5, name: 'Airrack', subsM: 17.8, avgViewsM: 3.2, momentum: -0.1 },
+        { id: 6, name: 'MKBHD', subsM: 20.1, avgViewsM: 2.4, momentum: -0.2 }
+      ],
+      bets: []
+    };
 
-<script>
-const grid=document.getElementById('grid');
-const bulk=document.getElementById('bulk');
-const fileIn=document.getElementById('file');
-const fileName=document.getElementById('fileName');
-const btnSplit=document.getElementById('btnSplit');
-const list=document.getElementById('list');
-const count=document.getElementById('count');
-const proxyBase=document.getElementById('proxyBase');
-const quality=document.getElementById('quality');
-const parallel=document.getElementById('parallel');
-const retry=document.getElementById('retry');
-const go=document.getElementById('go');
-const qEl=document.getElementById('q'), aEl=document.getElementById('a'), dEl=document.getElementById('d'), fEl=document.getElementById('f');
-const err=document.getElementById('err'); const splitMsg=document.getElementById('splitMsg'); const splitMode=document.getElementById('splitMode');
+    const el = {
+      bankroll: document.getElementById('bankroll'),
+      round: document.getElementById('round'),
+      openBets: document.getElementById('openBets'),
+      pnl: document.getElementById('pnl'),
+      creatorGrid: document.getElementById('creatorGrid'),
+      betsList: document.getElementById('betsList'),
+      betModal: document.getElementById('betModal'),
+      betTitle: document.getElementById('betTitle'),
+      betDirection: document.getElementById('betDirection'),
+      betStake: document.getElementById('betStake'),
+      betHorizon: document.getElementById('betHorizon'),
+      oddsPreview: document.getElementById('oddsPreview')
+    };
 
-let prompts=[]; let queue=[]; let active=new Set(); let completed=0, failed=0;
+    let selectedCreator = null;
 
-fileIn.addEventListener('change', async (e)=>{
-  const f=e.target.files[0]; if(!f) return;
-  fileName.textContent = f.name + " (" + f.size + " bytes)";
-  const text=await f.text();
-  bulk.value = text;
-});
+    function formatCoins(n) {
+      const sign = n > 0 ? '+' : '';
+      return sign + Math.round(n).toLocaleString();
+    }
 
-btnSplit.addEventListener('click', async ()=>{
-  try{
-    err.style.display='none'; splitMsg.textContent='Splitting...';
-    const base = (proxyBase.value||'').replace(/\/$/,'').replace(/\/api\/fal$/,'/api');
-    const useAI = splitMode.value === 'ai';
-    const res = await fetch(base + '/split', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: bulk.value, ai: useAI }) });
-    const json = await res.json();
-    if(!res.ok){ throw new Error(json && json.error ? json.error : ("Split error " + res.status)); }
-    if(!Array.isArray(json.prompts)){ throw new Error('Bad split response'); }
-    prompts = json.prompts.slice(0, 1000);
-    renderPromptList();
-    splitMsg.textContent = (json.mode === 'ai' ? '✓ AI split complete' : '✓ Heuristic split complete');
-  }catch(e){
-    err.textContent = e.message; err.style.display='block'; splitMsg.textContent='';
-  }
-});
+    function trendLabel(m) {
+      if (m > 0.2) return ['UP', 'up'];
+      if (m < -0.2) return ['DOWN', 'down'];
+      return ['FLAT', 'flat'];
+    }
 
-function renderPromptList(){
-  count.textContent = String(prompts.length);
-  list.innerHTML = prompts.map((p,i)=>`<div style="padding:6px;border-bottom:1px solid #eee"><b>${i+1}.</b> ${escapeHtml(p)}</div>`).join('');
-}
-function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+    function getOdds(creator, direction, horizon) {
+      const base = 1.6 + (Math.random() * 0.15);
+      const edge = direction === 'up' ? creator.momentum : -creator.momentum;
+      const adjusted = base + (edge < 0 ? Math.abs(edge) * 0.7 : -edge * 0.4) + (Number(horizon) - 1) * 0.2;
+      return Math.max(1.3, Math.min(3.4, adjusted));
+    }
 
-function mapQuality(q){ if(q==='hd') return {width:960,height:720,steps:34}; if(q==='4k') return {width:1152,height:864,steps:42}; return {width:768,height:576,steps:26}; }
-function cartoonize(p){ const style="cartoon, cel shading, 2D animation, bold outlines, flat shading, vibrant colors"; const neg="photorealistic, realistic, 3d render, blurry, watermark, text"; return { prompt: p + ", " + style, negative_prompt: neg }; }
+    function render() {
+      el.bankroll.textContent = formatCoins(state.bankroll);
+      el.round.textContent = String(state.round);
+      el.pnl.textContent = formatCoins(state.pnl);
 
-async function txt2img(basePath, prompt, q){
-  const {width,height,steps}=mapQuality(q);
-  const {prompt:final, negative_prompt}=cartoonize(prompt);
-  const res = await fetch(basePath.replace(/\/$/,'') + "/txt2img", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ prompt: final, negative_prompt, width, height, steps }) });
-  if(!res.ok){ const t=await res.text(); throw new Error("Proxy error " + res.status + ": " + t); }
-  const json = await res.json();
-  const b64 = json.images && json.images[0]; if(!b64) throw new Error("No image returned");
-  return "data:image/png;base64," + b64;
-}
+      const open = state.bets.filter(b => b.status === 'open').length;
+      el.openBets.textContent = String(open);
 
-go.addEventListener('click', async ()=>{
-  try{
-    err.style.display='none';
-    const base = proxyBase.value.trim(); if(!base){ throw new Error("Set Proxy Base Path (your Worker URL) — e.g. https://your-worker.workers.dev/api/fal"); }
-    if(!prompts.length){ throw new Error("Run AI Smart Split first"); }
-    queue = prompts.map((p,i)=>({ id: Date.now()+i, prompt: p, status: 'pending', index: i }));
-    active.clear(); completed=0; failed=0; grid.innerHTML=''; tick();
+      el.creatorGrid.innerHTML = state.creators.map(c => {
+        const [label, cls] = trendLabel(c.momentum);
+        return `
+          <div class="card">
+            <div class="row">
+              <div>
+                <h4 class="name">${c.name}</h4>
+                <div class="sub">Subs: ${c.subsM.toFixed(1)}M</div>
+                <div class="sub">Avg views: ${c.avgViewsM.toFixed(1)}M</div>
+              </div>
+              <div style="text-align:right">
+                <span class="chip ${cls}">${label}</span>
+                <div class="sub">Momentum ${(c.momentum * 100).toFixed(0)}%</div>
+              </div>
+            </div>
+            <div class="toolbar">
+              <button class="btn-main" onclick="openBet(${c.id})">Bet This Creator</button>
+            </div>
+          </div>`;
+      }).join('');
 
-    queue.forEach(img => createCard(img));
-    const par = Math.max(1, Math.min(24, parseInt(parallel.value||"10",10)));
-    (async function loop(){
-      while(queue.length>0 || active.size>0){
-        while(active.size<par && queue.length>0){
-          const img=queue.shift(); img.status='processing'; active.add(img.id); updateCard(img);
-          generateOne(base, img).catch(()=>{});
-        }
-        await new Promise(r=>setTimeout(r,120)); tick();
+      const sorted = [...state.bets].reverse();
+      el.betsList.innerHTML = sorted.length ? sorted.map(b => {
+        const statusChip = b.status === 'won' ? 'up' : b.status === 'lost' ? 'down' : 'flat';
+        return `<div class="bet">
+          <div class="row"><b>${b.creatorName}</b><span class="chip ${statusChip}">${b.status.toUpperCase()}</span></div>
+          <div class="sub">${b.direction.toUpperCase()} · Stake ${formatCoins(b.stake)} · Odds ${b.odds.toFixed(2)}x · Expires R${b.expireRound}</div>
+          ${b.status !== 'open' ? `<div class="sub">Result: ${formatCoins(b.payout)}</div>` : ''}
+        </div>`;
+      }).join('') : '<div class="fine">No bets yet. Hit "Bet This Creator" to start.</div>';
+    }
+
+    function openBet(creatorId) {
+      selectedCreator = state.creators.find(c => c.id === creatorId);
+      if (!selectedCreator) return;
+      el.betTitle.textContent = `Place Bet · ${selectedCreator.name}`;
+      el.betDirection.value = 'up';
+      el.betStake.value = '100';
+      el.betHorizon.value = '1';
+      previewOdds();
+      el.betModal.classList.add('open');
+    }
+
+    function closeBet() {
+      el.betModal.classList.remove('open');
+      selectedCreator = null;
+    }
+
+    function previewOdds() {
+      if (!selectedCreator) return;
+      const direction = el.betDirection.value;
+      const horizon = Number(el.betHorizon.value);
+      const odds = getOdds(selectedCreator, direction, horizon);
+      el.oddsPreview.textContent = `Projected odds: ${odds.toFixed(2)}x (estimated payout ${formatCoins(Number(el.betStake.value || 0) * odds)})`;
+      el.oddsPreview.dataset.odds = String(odds);
+    }
+
+    function placeBet() {
+      if (!selectedCreator) return;
+      const stake = Number(el.betStake.value);
+      const direction = el.betDirection.value;
+      const horizon = Number(el.betHorizon.value);
+      if (!Number.isFinite(stake) || stake < 10) {
+        alert('Minimum stake is 10 fake coins.');
+        return;
       }
-      alert(`Done!\nCompleted: ${completed}\nFailed: ${failed}\nTotal: ${prompts.length}`);
-    })();
-  }catch(e){
-    err.textContent = e.message; err.style.display='block';
-  }
-});
+      if (stake > state.bankroll) {
+        alert('Not enough fake coins in bankroll.');
+        return;
+      }
 
-async function generateOne(base, img){
-  try{
-    const url = await txt2img(base, img.prompt, quality.value);
-    img.status='completed'; completed++; active.delete(img.id); updateCard(img, url);
-  }catch(e){
-    console.error(e); img.status='failed'; failed++; active.delete(img.id); updateCard(img);
-    if(retry.value==='yes' && !img._retried){ img._retried=true; img.status='pending'; queue.push(img); updateCard(img); }
-  }
-}
+      const odds = Number(el.oddsPreview.dataset.odds || getOdds(selectedCreator, direction, horizon));
+      state.bankroll -= stake;
+      state.bets.push({
+        id: Date.now(),
+        creatorId: selectedCreator.id,
+        creatorName: selectedCreator.name,
+        placedRound: state.round,
+        expireRound: state.round + horizon,
+        direction,
+        stake,
+        odds,
+        status: 'open',
+        payout: 0
+      });
 
-function createCard(image){
-  const card=document.createElement('div'); card.className='card'; card.dataset.id=image.id; card.dataset.status=image.status;
-  const thumbs=document.createElement('div'); thumbs.className='thumb'; thumbs.textContent='…';
-  const meta=document.createElement('div'); meta.style.padding='8px'; meta.innerHTML=`<div class="pill ${image.status}">${image.status.toUpperCase()}</div><div class="hint">${escapeHtml(image.prompt)}</div>`;
-  card.appendChild(thumbs); card.appendChild(meta); grid.appendChild(card);
-}
-function updateCard(image, url){
-  const card=grid.querySelector(`[data-id="${image.id}"]`); if(!card) return;
-  card.dataset.status=image.status;
-  const pill=card.querySelector('.pill'); pill.className='pill ' + image.status; pill.textContent=image.status.toUpperCase();
-  const thumb=card.querySelector('.thumb');
-  if(image.status==='completed'){ thumb.innerHTML=`<img src="${url}" alt="img" style="width:100%;height:100%;object-fit:cover">`; }
-  else if(image.status==='failed'){ thumb.textContent='Failed'; }
-  else { thumb.textContent='…'; }
-}
+      closeBet();
+      render();
+    }
 
-function tick(){ qEl.textContent=String(queue.length); aEl.textContent=String(active.size); dEl.textContent=String(completed); fEl.textContent=String(failed); }
-</script>
+    function simulateRound() {
+      state.creators = state.creators.map(c => {
+        const shock = (Math.random() - 0.5) * 0.7;
+        let momentum = (c.momentum * 0.6) + shock;
+        momentum = Math.max(-1, Math.min(1, momentum));
+
+        const growth = 1 + (momentum * 0.03);
+        const viewsGrowth = 1 + (momentum * 0.05);
+
+        return {
+          ...c,
+          momentum,
+          subsM: Math.max(0.1, c.subsM * growth),
+          avgViewsM: Math.max(0.05, c.avgViewsM * viewsGrowth)
+        };
+      });
+
+      state.round += 1;
+
+      for (const bet of state.bets) {
+        if (bet.status !== 'open' || bet.expireRound > state.round) continue;
+        const creator = state.creators.find(c => c.id === bet.creatorId);
+        if (!creator) continue;
+
+        const won = (bet.direction === 'up' && creator.momentum > 0) ||
+                    (bet.direction === 'down' && creator.momentum < 0);
+
+        if (won) {
+          const payout = bet.stake * bet.odds;
+          bet.payout = payout;
+          bet.status = 'won';
+          state.bankroll += payout;
+          state.pnl += (payout - bet.stake);
+        } else {
+          bet.payout = -bet.stake;
+          bet.status = 'lost';
+          state.pnl -= bet.stake;
+        }
+      }
+
+      render();
+    }
+
+    document.getElementById('advance').addEventListener('click', simulateRound);
+    document.getElementById('reset').addEventListener('click', () => {
+      if (!confirm('Reset league and bankroll?')) return;
+      window.location.reload();
+    });
+    document.getElementById('submitBet').addEventListener('click', placeBet);
+    document.getElementById('cancelBet').addEventListener('click', closeBet);
+    el.betDirection.addEventListener('change', previewOdds);
+    el.betHorizon.addEventListener('change', previewOdds);
+    el.betStake.addEventListener('input', previewOdds);
+
+    window.openBet = openBet;
+    render();
+  </script>
 </body>
 </html>
