@@ -1,24 +1,17 @@
-# AI Mega Batch — Online (Cloudflare) with **AI Smart Split** (v3)
+# YouTube Stats League Play (Fake Currency)
 
-- AI/Heuristic splitter (toggle in UI).
-- AI split now **chunks text** and **retries with exponential backoff** to survive 429s.
-- Up to **1000 prompts** per batch; generation uses a **parallel limit** (8–24 recommended).
+A lightweight browser game where you place **fake-coin bets** on whether a creator's performance trend will go **up** or **down** next round.
 
-## Required secrets (Worker)
-- `FAL_KEY` (or `FAL_API_KEY`) — FAL.ai key
-- `OPENAI_API_KEY` — for AI Smart Split
+## What it does
+- Tracks a bankroll (starts at 10,000 fake coins).
+- Lets you place UP/DOWN bets on a list of YouTubers.
+- Uses dynamic odds (underdog directions pay more).
+- Simulates each round with momentum shifts + updated stats.
+- Settles bets automatically when their selected round horizon expires.
 
-## Optional vars
-- `OPENAI_MODEL` (default `gpt-4o-mini`)
-- `FAL_MODEL` (default `fal-ai/flux/dev`)
-- `SPLIT_MAX_CHARS` (default `12000` per chunk)
+## Run
+Open `index.html` in any browser.
 
-## Endpoints
-- `GET  /api/health`
-- `POST /api/fal/txt2img`
-- `POST /api/split`  body `{ text, ai: true|false }`
-
-## Use
-1) Deploy `worker.js` to Cloudflare Worker; add the secrets above.
-2) Open `index.html`; set Proxy Base Path to `https://<your-worker>.workers.dev/api/fal`.
-3) Paste big text → **AI Smart Split** (or Heuristic) → **🚀 Start Generation**.
+## Notes
+- This is for entertainment/simulation only.
+- Uses fake currency only; no real-money wagering.
